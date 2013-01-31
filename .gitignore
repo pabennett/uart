@@ -22,6 +22,7 @@
 *.html
 *.mrp
 *.map
+/synthesis/config_S6LX9.bat
 /synthesis/*.txt
 /synthesis/*.csv
 /synthesis/xlnx_auto_0_xdb
