@@ -1,0 +1,7 @@
+*.xrpt
+*.ngc
+*.lso
+*.bld
+*.log
+/synthesis/xlnx_auto_0_xdb
+/synthesis/_xmsgs
