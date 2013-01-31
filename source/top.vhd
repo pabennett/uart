@@ -61,7 +61,7 @@ begin
         if rising_edge(CLOCK_Y3) then
             rx_sync         <= USB_RS232_RXD;
             rx              <= rx_sync;
-            reset_sync      <= not USER_RESET;
+            reset_sync      <= USER_RESET;
             reset           <= reset_sync;
             USB_RS232_TXD   <= tx;
         end if;

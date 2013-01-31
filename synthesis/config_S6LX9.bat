@@ -26,7 +26,7 @@ REM All rights reserved.
 @echo #   Spartan-6 LX9 MicroBoard using the on-board Digilent JTAG.           #
 @echo ##########################################################################
 
-set   bitstream=message_gen_routed.bit
+set   bitstream=top_routed.bit
 set   cmd_file=config_s6lx9.cmd
 
 @echo setMode -bscan                       > %cmd_file%

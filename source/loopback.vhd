@@ -99,21 +99,22 @@ begin
     begin
         if rising_edge(CLOCK) then
             if RESET = '1' then
-                uart_data_in_stb <= '0';
-                uart_data_out_ack <= '0';
-                uart_data_in <= (others => '0');
+                uart_data_in_stb        <= '0';
+                uart_data_out_ack       <= '0';
+                uart_data_in            <= (others => '0');
             else
                 -- Acknowledge data receive strobes and set up a transmission
                 -- request
+                uart_data_out_ack       <= '0';
                 if uart_data_out_stb = '1' then
-                    uart_data_out_ack <= '1';
-                    uart_data_in_stb <= '1';
-                    uart_data_in <= uart_data_out;
+                    uart_data_out_ack   <= '1';
+                    uart_data_in_stb    <= '1';
+                    uart_data_in        <= uart_data_out;
                 end if;
                 
                 -- Clear transmission request strobe upon acknowledge.
                 if uart_data_in_ack = '1' then
-                    uart_data_in_stb <= '0';
+                    uart_data_in_stb    <= '0';
                 end if;
             end if;
         end if;

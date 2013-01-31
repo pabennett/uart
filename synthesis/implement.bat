@@ -7,7 +7,7 @@ rmdir /S /Q xst_work
 erase %core%*
 
 xst -ifn implement.ifn -ofn implement.log
-ngdbuild -p %part% -uc %core%.ucf %core%
+ngdbuild -p %part% -uc uart.ucf %core%
 map -pr b %core%.ngd -o %core%.ncd %core%.pcf
 par -ol std -w %core%.ncd %core%_routed %core%.pcf
 trce -v 10 %core%_routed.ncd %core%.pcf
