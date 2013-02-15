@@ -1,7 +1,7 @@
 set -xsthdpdir xst_work
 run
 -ifn uart.prj
--p xc6slx9-csg324-2
+-p xc6slx45-csg324-2
 -ofn top
 -ifmt mixed
 -opt_mode speed

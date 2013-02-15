@@ -1,7 +1,7 @@
 call F:\Development\ISE_DS\settings64.bat
 
 set core=top
-set part=xc6slx9-csg324-2
+set part=xc6slx45-csg324-2
 
 rmdir /S /Q xst_work
 erase %core%*

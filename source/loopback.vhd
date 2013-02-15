@@ -30,7 +30,7 @@ architecture RTL of LOOPBACK is
     -- UART constants
     ----------------------------------------------------------------------------
     
-    constant BAUD_RATE              : positive := 115200;
+    constant BAUD_RATE              : positive := 9600;
     constant CLOCK_FREQUENCY        : positive := 100000000;
     
     ----------------------------------------------------------------------------
