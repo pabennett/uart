@@ -10,7 +10,10 @@ entity TOP is
         CLOCK_Y3                :   in      std_logic;
         USER_RESET              :   in      std_logic;    
         USB_RS232_RXD           :   in      std_logic;
-        USB_RS232_TXD           :   out     std_logic
+        USB_RS232_TXD           :   out     std_logic;
+        LED_TX                  :   out     std_logic;
+        LED_RX                  :   out     std_logic;
+        LED_HEARTBEAT           :   out     std_logic
     );
 end TOP;
 
@@ -27,7 +30,10 @@ architecture RTL of TOP is
             CLOCK                   :   in      std_logic;
             RESET                   :   in      std_logic;    
             RX                      :   in      std_logic;
-            TX                      :   out     std_logic
+            TX                      :   out     std_logic;
+            LED_TX                  :   out     std_logic;
+            LED_RX                  :   out     std_logic;
+            LED_HEARTBEAT           :   out     std_logic
         );
     end component LOOPBACK;
     
@@ -49,7 +55,10 @@ begin
             CLOCK       => CLOCK_Y3,
             RESET       => reset, 
             RX          => rx,
-            TX          => tx
+            TX          => tx,
+            LED_TX      => LED_TX,
+            LED_RX      => LED_RX,
+            LED_HEARTBEAT => LED_HEARTBEAT
     );
     
     ----------------------------------------------------------------------------

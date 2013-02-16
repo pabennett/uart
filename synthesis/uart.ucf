@@ -14,3 +14,6 @@ NET CLOCK_Y3          LOC = L15 | IOSTANDARD = LVCMOS33;               # "CLOCK_
 NET CLOCK_Y3 TNM_NET = CLOCK_Y3;
 TIMESPEC TS_CLOCK_Y3 = PERIOD CLOCK_Y3 100000 kHz;
 
+NET LED_TX LOC = "U18"; # Bank = 1, Pin name = IO_L52N_M1DQ15, 	   Sch name = LD0
+NET LED_RX LOC = "M14"; # Bank = 1, Pin name = IO_L53P, 		 	   Sch name = LD1
+NET LED_HEARTBEAT LOC = "N14"; # Bank = 1, Pin name = IO_L53N_VREF, 	   Sch name = LD2

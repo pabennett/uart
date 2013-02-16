@@ -21,7 +21,10 @@ entity LOOPBACK is
         CLOCK                   :   in      std_logic;
         RESET                   :   in      std_logic;    
         RX                      :   in      std_logic;
-        TX                      :   out     std_logic
+        TX                      :   out     std_logic;
+        LED_TX                  :   out     std_logic;
+        LED_RX                  :   out     std_logic;
+        LED_HEARTBEAT           :   out     std_logic
     );
 end LOOPBACK;
 
@@ -65,6 +68,14 @@ architecture RTL of LOOPBACK is
     signal uart_data_in_ack         : std_logic;
     signal uart_data_out_stb        : std_logic;
     signal uart_data_out_ack        : std_logic;
+    
+    signal led_tx_bit               : std_logic;
+    signal led_rx_bit               : std_logic;
+    signal led_tx_count             : unsigned(22 downto 0);
+    signal led_rx_count             : unsigned(22 downto 0);
+    signal led_hb_count             : unsigned(22 downto 0);
+    
+    signal led_hb                   : std_logic;
   
 begin
 
@@ -119,5 +130,66 @@ begin
             end if;
         end if;
     end process;
+    
+    LED_TX  <= led_tx_bit;
+    LED_RX  <= led_rx_bit;
+    LED_HEARTBEAT <= led_hb;
+    
+    TX_LED  : process (CLOCK)
+    begin
+        if rising_edge(CLOCK) then
+            if RESET = '1' then
+                led_tx_bit <= '1';
+                led_tx_count <= (others => '1');
+            else
+                if uart_data_in_ack = '1' then
+                    led_tx_count <= (others => '1');
+                end if;
+                
+                if led_tx_count > 0 then
+                    led_tx_bit <= '1';
+                    led_tx_count <= led_tx_count - 1;
+                else
+                    led_tx_bit <= '0';
+                end if;
+            end if;
+        end if;
+    end process;
+    
+    RX_LED  : process (CLOCK)
+    begin
+        if rising_edge(CLOCK) then
+            if RESET = '1' then
+                led_rx_bit <= '1';
+                led_rx_count <= (others => '1');
+            else
+                if uart_data_out_ack = '1' then
+                    led_rx_count <= (others => '1');
+                end if;
+                
+                if led_rx_count > 0 then
+                    led_rx_bit <= '1';
+                    led_rx_count <= led_rx_count - 1;
+                else
+                    led_rx_bit <= '0';
+                end if;
+            end if;
+        end if;
+    end process;  
+    
+    HEARTBEAT  : process (CLOCK)
+    begin
+        if rising_edge(CLOCK) then
+            if RESET = '1' then
+                led_hb <= '1';
+                led_hb_count <= (others => '1');
+            else                
+                led_hb_count <= led_hb_count - 1;
+                if led_hb_count = 0 then
+                    led_hb <= not led_hb;
+                end if;
+            end if;
+        end if;
+    end process; 
             
 end RTL;
