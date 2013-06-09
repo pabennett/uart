@@ -25,7 +25,8 @@ use ieee.math_real.log2;
 use ieee.math_real.ceil;
 
 
--- OPTIMIZE GENERAL: Replace clock enable with local clock instead?
+-- OPTIMIZE GENERAL: Replace clock enable with local clock instead? Check
+-- inferred regs (CE used?)
 
 entity UART is
     Generic (
@@ -51,8 +52,6 @@ entity UART is
 end UART;
 
 architecture RTL of UART is
-    -- OPTIMIZE HERE: Constrain integer values (it seems like ISE creates 32bit
-    -- counters for them)
     ----------------------------------------------------------------------------
     -- BAUD Generation
     ----------------------------------------------------------------------------
@@ -101,18 +100,18 @@ architecture RTL of UART is
     ----------------------------------------------------------------------------
     -- Receiver Signals
     ----------------------------------------------------------------------------
-    type    uart_rx_states is ( rx_wait_start_synchronise,
-                                rx_get_start_bit,  -- We are reading the start bit
-                                rx_get_data,
-                                rx_get_stop_bit,
-                                rx_send_block);
+    type    uart_rx_states is ( rx_wait_start_synchronise  -- Wait and deliver data
+                                , rx_get_start_bit  -- We are reading the start bit
+                                , rx_get_data
+                                , rx_get_stop_bit
+                                );
 
     signal  uart_rx_state       : uart_rx_states := rx_wait_start_synchronise;
     signal  uart_rx_bit         : std_logic := '0';
     signal  uart_rx_data_block  : std_logic_vector(7 downto 0) := (others => '0');
     signal  uart_rx_filter      : unsigned(1 downto 0)  := (others => '0');
     signal  uart_rx_count       : uart_rxtx_count_type := c_uart_rxtx_count_reset; -- 8 states, stored in 3 bits
-    signal  uart_rx_data_out_stb: std_logic := '0';
+    signal  uart_rx_data_out_stb: std_ulogic := '0';
     -- Syncing Clock to Receive Data, compared to baud_counter and creates uart_rx_sample_tick
     signal  uart_rx_sync_clock  : baud_counter_type := (others => '0');
 
@@ -313,6 +312,14 @@ begin
                 case uart_rx_state is
                     -- Waiting for new data to come
                     when rx_wait_start_synchronise =>
+                        -- With normal clock: Take care about the ACK from
+                        -- previous received data
+                        if DATA_STREAM_OUT_ACK = '1' then
+                          -- Revoke strobe
+                          uart_rx_data_out_stb    <= '0';
+                          -- No need to reset data block, it's anyway overwritten during recive
+                          -- uart_rx_data_block      <= (others => '0');
+                        end if;
                         -- Only here we need to look for start with the
                         -- oversampled clock rate
                         if oversample_baud_tick = '1' and uart_rx_bit = '0' then
@@ -325,13 +332,32 @@ begin
                             -- This will be used from now on as sample moment
                             uart_rx_sync_clock <=
                                  (not baud_counter(3), baud_counter(2), baud_counter(1), baud_counter(0) );
-                        end if;
+                        end if;         -- oversample_baud_tick = '1' and uart_rx_bit = '0'
                     when rx_get_start_bit =>
+                        -- With normal clock: Take care about the ACK from
+                        -- previous received data
+                        if DATA_STREAM_OUT_ACK = '1' then
+                          -- Revoke strobe
+                          uart_rx_data_out_stb    <= '0';
+                          -- No need to reset data block, it's anyway overwritten during recive
+                          -- uart_rx_data_block      <= (others => '0');
+                        end if;
                         if uart_rx_sample_tick = '1' then
                           if  uart_rx_bit = '0' then
                             -- Everything alright, we really got a start bit
                             -- Please continue with data reception
                             uart_rx_state <= rx_get_data;
+                            -- This is the last time we can revoke a potentially pending
+                            -- receive strobe
+                            -- Your fault if you didn't fetched the data until here!
+                            uart_rx_data_out_stb    <= '0';
+                            -- But at least warn about this
+                            -- Not for synthesis:
+                            -- pragma translate_off
+                            assert uart_rx_data_out_stb = '0'
+                              report "Receive Data was not fetched by system! Loosing previous data byte!"
+                              severity warning;
+                            -- pragma translate_on
                           else
                             -- Oh now! Corrupted Start bit! Now we're in troube
                             -- Best to abort the game and issue an (simulation)
@@ -362,24 +388,22 @@ begin
                     when rx_get_stop_bit =>
                         if uart_rx_sample_tick = '1' then
                             if uart_rx_bit = '1' then
-                                uart_rx_state <= rx_send_block;
+                                -- Everything alright, we really got the closing stop  bit
+                                -- Set our strobe: Data is ready!
                                 uart_rx_data_out_stb    <= '1';
-                                -- FIX HERE - else?? Abort Receive!!
+                            else
+                              -- Oh now! Corrupted Stop bit! Now we're in troube
+                              -- Best to abort the game and issue an (simulation) warning
+                              -- Not for synthesis:
+                              -- pragma translate_off
+                              report "We got an corrupted stop bit! Something is wrong - throwing away this data byte"
+                                severity error;
+                              -- pragma translate_on
                             end if;
+                            -- Anyway, go to wait for next datablock
+                            uart_rx_state <= rx_wait_start_synchronise;
                         end if;
-                        -- OPTIMIZE HERE: Separate STREAM_OUT from receive, so
-                        -- that recieve can continue while data can be fetched
-                        -- from the system - also clock enable here with
-                        -- uart_rx_sample_tick ?
-                    when rx_send_block =>
-                        if DATA_STREAM_OUT_ACK = '1' then
-                            uart_rx_data_out_stb    <= '0';
-                            uart_rx_data_block      <= (others => '0');
-                            uart_rx_state           <= rx_wait_start_synchronise;
-                        else
-                            uart_rx_data_out_stb    <= '1';
-                        end if;
-                    when others =>
+                    when others =>      -- This is an illegal state - start over
                         uart_rx_state   <= rx_wait_start_synchronise;
                 end case;
             end if;
