@@ -69,6 +69,9 @@ architecture RTL of UART is
     subtype oversample_baud_counter_type is unsigned(c_oversample_divider_bits-1 downto 0);
     -- Please only use this final value
     constant c_oversample_divider_val : oversample_baud_counter_type  := to_unsigned(c_oversample_divider_steps, c_oversample_divider_bits);
+    -- Datatype for the rx and tx counter type, must accomodate for the 8bit positions
+    subtype uart_rxtx_count_type is unsigned(2 downto 0);
+    constant c_uart_rxtx_count_reset : uart_rxtx_count_type  := "000";  -- Reset value: 0
 
     signal oversample_baud_counter    : oversample_baud_counter_type := c_oversample_divider_val;
     -- Tick created every counter reset
@@ -93,8 +96,7 @@ architecture RTL of UART is
 
     signal  uart_tx_data_block  : std_logic_vector(7 downto 0) := (others => '0');
     signal  uart_tx_data        : std_logic := '1';
-    constant c_uart_tx_count_reset : unsigned(2 downto 0)  := to_unsigned(0, 3);  -- Reset value: 0
-    signal  uart_tx_count       : unsigned(2 downto 0)  := c_uart_tx_count_reset; -- 8 states, stored in 3 bits
+    signal  uart_tx_count       : uart_rxtx_count_type := c_uart_rxtx_count_reset; -- 8 states, stored in 3 bits
     signal  uart_rx_data_in_ack : std_logic := '0';
     ----------------------------------------------------------------------------
     -- Receiver Signals
@@ -109,11 +111,28 @@ architecture RTL of UART is
     signal  uart_rx_bit         : std_logic := '0';
     signal  uart_rx_data_block  : std_logic_vector(7 downto 0) := (others => '0');
     signal  uart_rx_filter      : unsigned(1 downto 0)  := (others => '0');
-    signal  uart_rx_count       : integer   := 0;
+    signal  uart_rx_count       : uart_rxtx_count_type := c_uart_rxtx_count_reset; -- 8 states, stored in 3 bits
     signal  uart_rx_data_out_stb: std_logic := '0';
     -- Syncing Clock to Receive Data, compared to baud_counter and creates uart_rx_sample_tick
     signal  uart_rx_sync_clock  : baud_counter_type := (others => '0');
 
+    ----------------------------------------------------------------------------
+    -- Helper functions
+    ----------------------------------------------------------------------------
+    pure function shift_right_by_one (        -- Shift right by 1, fill with new bit
+      constant shift : in std_logic_vector(7 downto 0);  -- Signal to shift
+      constant fill  : in std_ulogic)                    -- New bit 7
+      return std_logic_vector is
+      variable ret : std_logic_vector(7 downto 0);
+    begin  -- function shift_right_by_one
+      ret(7) := fill;
+      ret(6 downto 0) := shift (7 downto 1);
+      return ret;
+    end function shift_right_by_one;
+
+    ----------------------------------------------------------------------------
+    -- Begin Body
+    ----------------------------------------------------------------------------
 begin
 
     ----------------------------------------------------------------------------
@@ -161,7 +180,7 @@ begin
             if RESET = '1' then
                 uart_tx_data            <= '1';
                 uart_tx_data_block      <= (others => '0');
-                uart_tx_count           <= c_uart_tx_count_reset;
+                uart_tx_count           <= c_uart_rxtx_count_reset;
                 uart_tx_state           <= idle;
                 uart_rx_data_in_ack     <= '0';
             else
@@ -181,17 +200,15 @@ begin
                         if baud_tick = '1' then
                             uart_tx_data    <= '0';
                             uart_tx_state   <= transmit_data;
-                            uart_tx_count   <= c_uart_tx_count_reset;
                         end if;
                     when transmit_data =>
                         if baud_tick = '1' then
                           -- Send next bit
                           uart_tx_data    <=  uart_tx_data_block(0);
-                          -- Shift for next transmit bit
-								  -- Xilinx ISE does not know srl? So just build it ourself, hehe
-								  -- uart_tx_data_block <=  uart_tx_data_block srl 1;
-                          uart_tx_data_block(7) <=  '-'; -- don't care about this
-                          uart_tx_data_block(6 downto 0) <= uart_tx_data_block (7 downto 1);
+                          -- Shift for next transmit bit, filling with don't care
+                          -- Xilinx ISE does not know srl? So just build it ourself, hehe
+			  -- uart_tx_data_block <=  uart_tx_data_block srl 1;
+                          uart_tx_data_block <= shift_right_by_one(uart_tx_data_block, '-');
                           if uart_tx_count = 7 then  -- binary 111
                             -- We're done, move to next state
                             uart_tx_state   <= send_stop_bit;
@@ -264,7 +281,7 @@ begin
             if RESET = '1' then
                 uart_rx_filter <= (others => '1');
                 uart_rx_bit    <= '1';
-            else                        -- OPTIMIZE HERE - maybe a 3bit LUT?
+            else
                 if oversample_baud_tick = '1' then
                     -- Filter RXD.
                     if RX = '1' and uart_rx_filter < 3 then
@@ -289,7 +306,7 @@ begin
             if RESET = '1' then
                 uart_rx_state           <= rx_wait_start_synchronise;
                 uart_rx_data_block      <= (others => '0');
-                uart_rx_count           <= 0;
+                uart_rx_count           <= c_uart_rxtx_count_reset;
                 uart_rx_data_out_stb    <= '0';
                 uart_rx_sync_clock      <=  (others => '0');
             else
@@ -329,16 +346,18 @@ begin
                         end if;
                     when rx_get_data =>
                         if uart_rx_sample_tick = '1' then
-                            if uart_rx_count < 7 then  -- OPTIMIZE HERE - no
-                                                       -- compare please
-                                uart_rx_data_block(uart_rx_count)
-                                    <= uart_rx_bit;
-                                uart_rx_count   <= uart_rx_count + 1;
-                            else
-                                uart_rx_data_block(7) <= uart_rx_bit;
-                                uart_rx_count <= 0;
-                                uart_rx_state <= rx_get_stop_bit;
-                            end if;
+                          -- Receive next bit, shift others one bit down
+                          -- We receive lsb first, thus we're filling and shifting from msb direction
+                          uart_rx_data_block <= shift_right_by_one(uart_rx_data_block, uart_rx_bit);
+                          if uart_rx_count = 7 then  -- binary 111
+                            -- We're done, move to next state
+                            uart_rx_state <= rx_get_stop_bit;
+                          else
+                            -- Continue in this state
+                            uart_rx_state <= rx_get_data;
+                          end if;
+                          -- Always increment here, will go to zero if we're out
+                          uart_rx_count   <= uart_rx_count + 1;
                         end if;
                     when rx_get_stop_bit =>
                         if uart_rx_sample_tick = '1' then
