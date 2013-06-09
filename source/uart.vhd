@@ -93,7 +93,8 @@ architecture RTL of UART is
 
     signal  uart_tx_data_block  : std_logic_vector(7 downto 0) := (others => '0');
     signal  uart_tx_data        : std_logic := '1';
-    signal  uart_tx_count       : integer   := 0;
+    constant c_uart_tx_count_reset : unsigned(2 downto 0)  := to_unsigned(0, 3);  -- Reset value: 0
+    signal  uart_tx_count       : unsigned(2 downto 0)  := c_uart_tx_count_reset; -- 8 states, stored in 3 bits
     signal  uart_rx_data_in_ack : std_logic := '0';
     ----------------------------------------------------------------------------
     -- Receiver Signals
@@ -147,8 +148,6 @@ begin
     end process TX_CLOCK_DIVIDER;
     -- And thats the baud tick, which is of course only one clock long
     -- So both counters should be Zero
-    -- OPTIMIZE HERE - try to make "baud_counter=0" a intermediate signal (used
-    -- multiple times)
     TX_TICK: baud_tick <= '0' when RESET = '1' else
                           '1' when oversample_baud_tick = '1' and baud_counter = 0 else
                           '0';
@@ -162,7 +161,7 @@ begin
             if RESET = '1' then
                 uart_tx_data            <= '1';
                 uart_tx_data_block      <= (others => '0');
-                uart_tx_count           <= 0;
+                uart_tx_count           <= c_uart_tx_count_reset;
                 uart_tx_state           <= idle;
                 uart_rx_data_in_ack     <= '0';
             else
@@ -182,19 +181,26 @@ begin
                         if baud_tick = '1' then
                             uart_tx_data    <= '0';
                             uart_tx_state   <= transmit_data;
-                            uart_tx_count   <= 0;
+                            uart_tx_count   <= c_uart_tx_count_reset;
                         end if;
-                    when transmit_data =>  -- OPTIMIZE HERE?
+                    when transmit_data =>
                         if baud_tick = '1' then
-                            if uart_tx_count < 7 then  -- OPTIMIZE HERE?
-                                uart_tx_data    <=
-                                    uart_tx_data_block(uart_tx_count);
-                                uart_tx_count   <= uart_tx_count + 1;
-                            else
-                                uart_tx_data    <= uart_tx_data_block(7);
-                                uart_tx_count   <= 0;
-                                uart_tx_state   <= send_stop_bit;
-                            end if;
+                          -- Send next bit
+                          uart_tx_data    <=  uart_tx_data_block(0);
+                          -- Shift for next transmit bit
+								  -- Xilinx ISE does not know srl? So just build it ourself, hehe
+								  -- uart_tx_data_block <=  uart_tx_data_block srl 1;
+                          uart_tx_data_block(7) <=  '-'; -- don't care about this
+                          uart_tx_data_block(6 downto 0) <= uart_tx_data_block (7 downto 1);
+                          if uart_tx_count = 7 then  -- binary 111
+                            -- We're done, move to next state
+                            uart_tx_state   <= send_stop_bit;
+                          else
+                            -- Stay in current state
+                            uart_tx_state   <= transmit_data;
+                          end if;
+                          -- Always increment here, will go to zero if we're out
+                          uart_tx_count   <= uart_tx_count + 1;
                         end if;
                     when send_stop_bit =>
                         if baud_tick = '1' then
