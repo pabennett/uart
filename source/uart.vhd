@@ -25,26 +25,40 @@ use ieee.math_real.log2;
 use ieee.math_real.ceil;
 
 
--- OPTIMIZE GENERAL: Replace clock enable with local clock instead? Check
--- inferred regs (CE used?)
--- Said CE is better, but just give it a try
-
 entity UART is
     Generic (
-            -- Baudrate in bps, must be a straight multiple of 16-times
-            -- oversampling clock in receive path
+            -- Baudrate in bps
+            -- The baudrate must satisify the following condition:
+            -- BAUD_DIVIDER := truncate(CLOCK_FREQUENCY/BAUD_RATE)
+            -- remainder(BAUD_DIVIDER/16) == 0
+            -- Why: 16 times oversampling on the receiver side
+            -- Also take care that the remainder(CLOCK_FREQUENCY/BAUD_RATE) is
+            -- small because this determines the UART baud rate error
             -- See constant c_oversample_divider_val for more information
             BAUD_RATE           : positive;
             -- Input Clock frequency in Hz
             CLOCK_FREQUENCY     : positive
         );
-    Port (  -- System Clock
+    Port (
+            -- System Clock
             CLOCK           :   in      std_logic;
             -- High-Active Asynchronous Reset
             RESET               :   in      std_logic;
+            -- The input data: 8 bit - this is the UART sender
+            -- Provide data on DATA_STREAM_IN and set STB to high
+            -- Keep the data stable until ACK is set to high which shows that
+            -- the data is copied into the internal buffer. Then you should
+            -- revoke STB and you can change IN as you want.
             DATA_STREAM_IN      :   in      std_logic_vector(7 downto 0);
             DATA_STREAM_IN_STB  :   in      std_logic;
             DATA_STREAM_IN_ACK  :   out     std_logic := '0';
+            -- The output data: 8 bit - this is the UART receiver
+            -- Data is only valid during the time the STB is high
+            -- Acknowledge the data with a pulse on ACK, which is confirmed by
+            -- revoking STB.
+            -- When the following start bit is received the data becomes
+            -- invalid and the STB is revoked. So take care about fetching the
+            -- data early enough, or install your own FIFO buffer
             DATA_STREAM_OUT     :   out     std_logic_vector(7 downto 0);
             DATA_STREAM_OUT_STB :   out     std_logic;
             DATA_STREAM_OUT_ACK :   in      std_logic;
