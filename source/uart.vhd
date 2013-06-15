@@ -27,6 +27,7 @@ use ieee.math_real.ceil;
 
 -- OPTIMIZE GENERAL: Replace clock enable with local clock instead? Check
 -- inferred regs (CE used?)
+-- Said CE is better, but just give it a try
 
 entity UART is
     Generic (
@@ -37,8 +38,9 @@ entity UART is
             -- Input Clock frequency in Hz
             CLOCK_FREQUENCY     : positive
         );
-    Port (  -- General
+    Port (  -- System Clock
             CLOCK           :   in      std_logic;
+            -- High-Active Asynchronous Reset
             RESET               :   in      std_logic;
             DATA_STREAM_IN      :   in      std_logic_vector(7 downto 0);
             DATA_STREAM_IN_STB  :   in      std_logic;
@@ -148,12 +150,11 @@ begin
     -- here the 16-times oversampled RX clock again
     -- Use a down-counter to have a simple test for zero
     -- Thats the counter part
-   TX_CLOCK_DIVIDER   : process (CLOCK)
+   TX_CLOCK_DIVIDER   : process (CLOCK, RESET)
     begin
-        if rising_edge (CLOCK) then
-            if RESET = '1' then
-                baud_counter     <= (others => '1');
-            else
+      if RESET = '1' then
+        baud_counter     <= (others => '1');
+      elsif rising_edge (CLOCK) then
               if oversample_baud_tick = '1'  then  -- Use as Clock enable
                 if baud_counter = 0 then
                     baud_counter <= (others => '1');
@@ -161,8 +162,7 @@ begin
                     baud_counter <= baud_counter - 1;
                 end if;
               end if;
-            end if;
-        end if;
+      end if;
     end process TX_CLOCK_DIVIDER;
     -- And thats the baud tick, which is of course only one clock long
     -- So both counters should be Zero
@@ -173,16 +173,15 @@ begin
     -- Get data from DATA_STREAM_IN and send it one bit at a time
     -- upon each BAUD tick. LSB first.
     -- Wait 1 tick, Send Start Bit (0), Send Data 0-7, Send Stop Bit (1)
-    UART_SEND_DATA :    process(CLOCK)
+    UART_SEND_DATA :    process(CLOCK, RESET)
     begin
-        if rising_edge(CLOCK) then
-            if RESET = '1' then
+      if RESET = '1' then
                 uart_tx_data            <= '1';
                 uart_tx_data_block      <= (others => '0');
                 uart_tx_count           <= c_uart_rxtx_count_reset;
                 uart_tx_state           <= idle;
                 uart_rx_data_in_ack     <= '0';
-            else
+      elsif rising_edge(CLOCK) then
                 uart_rx_data_in_ack     <= '0';
                 case uart_tx_state is
                     when idle =>
@@ -227,8 +226,7 @@ begin
                         uart_tx_data <= '1';
                         uart_tx_state <= idle;
                 end case;
-            end if;
-        end if;
+      end if;
     end process UART_SEND_DATA;
 
     ----------------------------------------------------------------------------
@@ -242,13 +240,12 @@ begin
     -- create here from the input clock
     -- Use a down-counter to have a simple test for zero
     -- Thats for the counter and tick creation part
-   RX_CLOCK_DIVIDER   : process (CLOCK)
+   RX_CLOCK_DIVIDER   : process (CLOCK, RESET)
     begin
-        if rising_edge (CLOCK) then
-            if RESET = '1' then
-                oversample_baud_counter     <= c_oversample_divider_val;
-                oversample_baud_tick        <= '0';
-            else
+      if RESET = '1' then
+        oversample_baud_counter     <= c_oversample_divider_val;
+        oversample_baud_tick        <= '0';
+      elsif rising_edge (CLOCK) then
                 if oversample_baud_counter = 0 then
                     oversample_baud_counter <= c_oversample_divider_val;
                     oversample_baud_tick    <= '1';
@@ -256,8 +253,7 @@ begin
                     oversample_baud_counter <= oversample_baud_counter - 1;
                     oversample_baud_tick    <= '0';
                 end if;
-            end if;
-        end if;
+      end if;
     end process RX_CLOCK_DIVIDER;
 
     -- We create the sample time by syncing the oversampled tick (BAUD * 16)
@@ -274,13 +270,12 @@ begin
     -- start bit we can have somewhat of a jump here. But thats no problem
     -- because the jump (in case it occur) is still synchronous. And we save us
     -- another counter :-)
-    RXD_SYNC_FILTER  :   process(CLOCK)
+    RXD_SYNC_FILTER  :   process(CLOCK, RESET)
     begin
-        if rising_edge(CLOCK) then
-            if RESET = '1' then
-                uart_rx_filter <= (others => '1');
-                uart_rx_bit    <= '1';
-            else
+      if RESET = '1' then
+        uart_rx_filter <= (others => '1');
+        uart_rx_bit    <= '1';
+      elsif rising_edge(CLOCK) then
                 if oversample_baud_tick = '1' then
                     -- Filter RXD.
                     if RX = '1' and uart_rx_filter < 3 then
@@ -295,20 +290,18 @@ begin
                         uart_rx_bit <= '0';
                     end if;
                 end if;
-            end if;
-        end if;
+      end if;
     end process RXD_SYNC_FILTER;
 
-    UART_RECEIVE_DATA   : process(CLOCK)
+    UART_RECEIVE_DATA   : process(CLOCK, RESET)
     begin
-        if rising_edge(CLOCK) then
-            if RESET = '1' then
-                uart_rx_state           <= rx_wait_start_synchronise;
-                uart_rx_data_block      <= (others => '0');
-                uart_rx_count           <= c_uart_rxtx_count_reset;
-                uart_rx_data_out_stb    <= '0';
-                uart_rx_sync_clock      <=  (others => '0');
-            else
+      if RESET = '1' then
+        uart_rx_state           <= rx_wait_start_synchronise;
+        uart_rx_data_block      <= (others => '0');
+        uart_rx_count           <= c_uart_rxtx_count_reset;
+        uart_rx_data_out_stb    <= '0';
+        uart_rx_sync_clock      <=  (others => '0');
+      elsif rising_edge(CLOCK) then
                 case uart_rx_state is
                     -- Waiting for new data to come
                     when rx_wait_start_synchronise =>
@@ -406,7 +399,6 @@ begin
                     when others =>      -- This is an illegal state - start over
                         uart_rx_state   <= rx_wait_start_synchronise;
                 end case;
-            end if;
-        end if;
+      end if;
     end process UART_RECEIVE_DATA;
 end RTL;
