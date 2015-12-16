@@ -1,3 +1,0 @@
-vhdl work ../source/uart.vhd
-vhdl work ../source/loopback.vhd
-vhdl work ../source/top.vhd
