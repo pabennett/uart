@@ -75,8 +75,23 @@ top level directory:
 
 The synthesis flow is set to 'ise' as this is targeted at a Spartan6 FPGA.
 
+Build outputs will be automatically archived and stored in the **synthesis**
+directory.
+
 Further reading
 --------------------
 
-Original release post:
+Original release post
+~~~~~~~~~~~~~~~~~~~~~
+
 http://www.bytebash.com/2011/10/rs232-uart-vhdl/
+
+ChipTools repository
+~~~~~~~~~~~~~~~~~~~~~
+
+http://github.com/pabennett/chiptools
+
+ChipTools documentation
+~~~~~~~~~~~~~~~~~~~~~~~
+
+http://chiptools.readthedocs.org/en/latest/index.html
