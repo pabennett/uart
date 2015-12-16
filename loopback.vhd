@@ -19,14 +19,14 @@ architecture rtl of loopback is
     ----------------------------------------------------------------------------
     -- UART constants
     ----------------------------------------------------------------------------
-    constant baud_rate              : positive := 115200;
+    constant baud                   : positive := 115200;
     constant clock_frequency        : positive := 100000000;
     ----------------------------------------------------------------------------
     -- Component declarations
     ----------------------------------------------------------------------------
     component uart is
         generic (
-            baud_rate           : positive;
+            baud                : positive;
             clock_frequency     : positive
         );
         port (
@@ -58,7 +58,7 @@ begin
     ----------------------------------------------------------------------------
     uart_inst : uart
     generic map (
-        baud_rate           => baud_rate,
+        baud                => baud,
         clock_frequency     => clock_frequency
     )
     port map    (  
