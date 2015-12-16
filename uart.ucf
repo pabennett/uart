@@ -1,0 +1,11 @@
+###############################################################################
+# This UCF file is designed for the Spartan 6 LX9 Microboard from Avnet
+###############################################################################
+CONFIG VCCAUX=3.3;
+NET USB_RS232_RXD LOC = R7 | IOSTANDARD = LVCMOS33; # "USB_RS232_RXD"
+NET USB_RS232_TXD LOC = T7 | IOSTANDARD = LVCMOS33; # "USB_RS232_TXD"
+NET USER_RESET LOC = V4 | IOSTANDARD = LVCMOS33 | PULLDOWN; # "USER_RESET_N"
+NET USER_RESET TIG;
+NET CLOCK_Y3 LOC = C10 | IOSTANDARD = LVCMOS33; # "CLOCK_Y3"
+NET CLOCK_Y3 TNM_NET = CLOCK_Y3;
+TIMESPEC TS_CLOCK_Y3 = PERIOD CLOCK_Y3 100000 kHz;

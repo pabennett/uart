@@ -1,0 +1,23 @@
+<!-- UART Project File -->
+<!-- This project file is written for the ChipTools build & verification 
+     framework. Get it here: https://github.com/pabennett/chiptools -->
+<project>
+    <config simulation_directory='simulation'/>
+    <config synthesis_directory='synthesis'/>
+    <config simulator='modelsim'/>
+    <config synthesiser='ise'/>
+    <config part='xc6slx9-csg324-2'/>
+    <unittest path='uart_unit_tests.py'/>
+    <constraints path='uart.ucf' flow='ise'/>
+    <library name='lib_uart'>
+        <file path='top.vhd'/>
+        <file path='loopback.vhd'/>
+        <file path='uart.vhd'/>
+    </library>
+    <library name='lib_tb_uart'>
+        <file 
+            path='tb_uart.vhd'
+            synthesise='false'
+        />
+    </library>
+</project>
