@@ -23,8 +23,8 @@ class UartTestBase(ChipToolsTest):
         self.generics = {
             'local_clock_hz': int(self.local_clock_frequency),
             'remote_clock_hz': int(self.local_clock_frequency),
-            'baud': self.baud,
-            'delay_ns': self.delay_ns
+            'baud': int(self.baud),
+            'delay_ns': float(self.delay_ns)
         }
         self.input_path = os.path.join(self.simulation_root, 'input.txt')
         self.output_path = os.path.join(self.simulation_root, 'output.txt')
