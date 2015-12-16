@@ -18,8 +18,6 @@ class UartTestBase(ChipToolsTest):
     remote_clock_frequency = 100e6
 
     def simulationSetUp(self):
-        # calculate duration based on baud rate, (8bits/symbol + 3x margin)
-        self.duration = (len(self.values) * 8 * 3) / self.baud
         self.generics = {
             'local_clock_hz': int(self.local_clock_frequency),
             'remote_clock_hz': int(self.local_clock_frequency),
@@ -193,4 +191,64 @@ class uart_local_clock_50e6_remote_clock_160e6(UartTestBase):
 
     def test_output(self):
         """Check UART with a 50MHz local clock and a 160MHz remote clock"""
+        self.check_output()
+
+
+class uart_921600baud_local_clock_100e6_remote_clock_60e6(UartTestBase):
+    baud = 921600
+    local_clock_frequency = 100e6
+    remote_clock_frequency = 60e6
+    period = (1 / local_clock_frequency)
+    values = [random.randint(0, 2**8-1) for i in range(30000)]
+
+    def test_output(self):
+        """921600 BAUD with a 100MHz local clock and a 60MHz remote clock"""
+        self.check_output()
+
+
+class uart_one_character_0xFF(UartTestBase):
+    baud = 921600
+    local_clock_frequency = 100e6
+    remote_clock_frequency = 60e6
+    period = (1 / local_clock_frequency)
+    values = [0xFF]
+
+    def test_output(self):
+        """Check that the UART correctly processes a single character 0xFF"""
+        self.check_output()
+
+
+class uart_one_character_0x00(UartTestBase):
+    baud = 921600
+    local_clock_frequency = 100e6
+    remote_clock_frequency = 60e6
+    period = (1 / local_clock_frequency)
+    values = [0x00]
+
+    def test_output(self):
+        """Check that the UART correctly processes a single character 0x00"""
+        self.check_output()
+
+
+class uart_one_character_0xAA(UartTestBase):
+    baud = 921600
+    local_clock_frequency = 100e6
+    remote_clock_frequency = 60e6
+    period = (1 / local_clock_frequency)
+    values = [0xAA]
+
+    def test_output(self):
+        """Check that the UART correctly processes a single character 0xAA"""
+        self.check_output()
+
+
+class uart_one_character_0x55(UartTestBase):
+    baud = 921600
+    local_clock_frequency = 100e6
+    remote_clock_frequency = 60e6
+    period = (1 / local_clock_frequency)
+    values = [0x55]
+
+    def test_output(self):
+        """Check that the UART correctly processes a single character 0x55"""
         self.check_output()
