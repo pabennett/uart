@@ -77,22 +77,29 @@ architecture beh of tb_uart is
     signal local_data_out_ack   : std_logic;
     signal local_tx             : std_logic;
     signal local_rx             : std_logic; 
+    signal rx_count             : integer := 0;
+    signal tx_count             : integer := 0;
+    signal done                 : boolean := False;
 begin
     ---------------------------------------------------------------------------
     -- GENERATE LOCAL AND REMOTE CLOCKS
     ---------------------------------------------------------------------------
     local_clock_gen : process(local_clock)
     begin
-        local_clock <= not local_clock after (
-            (1.0 / real(local_clock_hz)) * real(1e9)
-        ) * 1 ns;
+        if not done then
+            local_clock <= not local_clock after (
+                (1.0 / real(local_clock_hz)) * real(1e9)
+            ) * 1 ns;
+        end if;
     end process;
     remote_clock_gen : process(remote_clock_int)
     begin
-        remote_clock_int <= not remote_clock_int after (
-            (1.0 / real(remote_clock_hz)) * real(1e9)
-        ) * 1 ns;
-        remote_clock <= transport remote_clock_int after delay_ns * 1 ns;
+        if not done then
+            remote_clock_int <= not remote_clock_int after (
+                (1.0 / real(remote_clock_hz)) * real(1e9)
+            ) * 1 ns;
+            remote_clock <= transport remote_clock_int after delay_ns * 1 ns;
+        end if;
     end process;
     ---------------------------------------------------------------------------
     -- READ/WRITE STIMULUS DATA FILES
@@ -107,7 +114,7 @@ begin
         variable status         : file_open_status := status_error;
         variable data           : bit_vector(7 downto 0);
         variable read_ok        : boolean;
-        variable first_call     : boolean := true;
+        variable first_call     : boolean := false;
     begin
         if status /= open_ok then
             file_open(status, input_file, input_path, read_mode);
@@ -123,6 +130,7 @@ begin
         if local_data_out_stb = '1' then
             write(output_line, to_bitvector(local_data_out));
             writeline(output_file, output_line);
+            rx_count <= rx_count + 1;
         end if;
 
         if not endfile(input_file) then
@@ -132,11 +140,18 @@ begin
                 read(data_line, data, read_ok);
                 local_data          <= to_stdlogicvector(data);
                 local_data_in_stb   <= '1';
+                tx_count            <= tx_count + 1;
             end if;
             wait until rising_edge(local_clock);
         else
             if local_data_in_ack = '1' then
-                local_data_in_stb <= '0';
+                local_data_in_stb   <= '0';
+            end if;
+            if rx_count = tx_count then
+                report "Test complete, transmit " & integer'image(tx_count) &
+                " byte(s) and received " & integer'image(rx_count) &
+                " byte(s)";
+                done <= true;
             end if;
             wait until rising_edge(local_clock);
         end if;
