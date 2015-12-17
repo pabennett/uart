@@ -69,7 +69,6 @@ architecture beh of tb_uart is
             clock_y3                :   in      std_logic;
             user_reset              :   in      std_logic;    
             usb_rs232_rxd           :   in      std_logic;
-            GPIO_LED                :   out     std_logic_vector(3 downto 0);
             usb_rs232_txd           :   out     std_logic
         );
     end component;
@@ -183,7 +182,6 @@ begin
         clock_y3            => remote_clock,
         user_reset          => '0',
         usb_rs232_rxd       => remote_rx,
-        GPIO_LED            => open,
         usb_rs232_txd       => remote_tx
     );
     ---------------------------------------------------------------------------
