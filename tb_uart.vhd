@@ -1,11 +1,14 @@
 -------------------------------------------------------------------------------
 -- TB_UART
--- This testbench instantiates two instances of the UART component which are
--- referred to as the 'local' UART and the 'remote' UART. The local UART is
--- given data to send from the input text file 'input.txt' which it then sends
--- to the remote UART. The remote UART is configured in loopback mode so it 
--- will retransmit any data that it receives. The testbench will store any 
--- data received by the local UART into the output file 'output.txt'.
+-- This testbench instantiates the top level UART loopback example
+-- (referred to as the 'remote' UART) and a separate instance of the UART core, 
+-- which is referred to as the 'local' UART.
+-- The local UART is given data to send from the input text file 'input.txt' 
+-- which it then sends to the remote UART via a serial interface. 
+-- The remote UART is configured in loopback mode so it 
+-- will retransmit any data that it receives back to the local UART. 
+-- The testbench will store any data received by the local UART into the output
+-- file 'output.txt'.
 -- Stimulus input and output checking is performed by the external Python
 -- unit test 'uart_unit_tests.py', which is designed to work with the ChipTools
 -- framework. This testbench allows the clock frequencies of the local and 
@@ -34,7 +37,7 @@ entity tb_uart is
         -- Remote clock frequency
         remote_clock_hz     : positive := 100000000;
         -- Local clock frequency
-        local_clock_hz      : positive := 100000000
+        local_clock_hz      : positive := 99999334
     );
 end entity;
 
@@ -53,9 +56,21 @@ architecture beh of tb_uart is
             data_stream_in_ack  :   out     std_logic := '0';
             data_stream_out     :   out     std_logic_vector(7 downto 0);
             data_stream_out_stb :   out     std_logic;
-            data_stream_out_ack :   in      std_logic;
             tx                  :   out     std_logic;
             rx                  :   in      std_logic
+        );
+    end component;
+    component top is
+        generic (
+            baud                : positive;
+            clock_frequency     : positive
+        );
+        port (  
+            clock_y3                :   in      std_logic;
+            user_reset              :   in      std_logic;    
+            usb_rs232_rxd           :   in      std_logic;
+            GPIO_LED                :   out     std_logic_vector(3 downto 0);
+            usb_rs232_txd           :   out     std_logic
         );
     end component;
     signal remote_clock         : std_logic := '0';
@@ -88,7 +103,7 @@ begin
     begin
         if not done then
             local_clock <= not local_clock after (
-                (1.0 / real(local_clock_hz)) * real(1e9)
+                (1.0 / (2.0 * real(local_clock_hz))) * real(1e9)
             ) * 1 ns;
         end if;
     end process;
@@ -96,7 +111,7 @@ begin
     begin
         if not done then
             remote_clock_int <= not remote_clock_int after (
-                (1.0 / real(remote_clock_hz)) * real(1e9)
+                (1.0 / (2.0 * real(remote_clock_hz))) * real(1e9)
             ) * 1 ns;
             remote_clock <= transport remote_clock_int after delay_ns * 1 ns;
         end if;
@@ -159,28 +174,18 @@ begin
     ---------------------------------------------------------------------------
     -- REMOTE UART
     ---------------------------------------------------------------------------
-    remote_uart : uart
+    remote_uart : top
     generic map(
-        baud                 => baud,
+        baud                => baud,
         clock_frequency     => remote_clock_hz
     )
-    port map(
-        -- general
-        clock               => remote_clock,
-        reset               => '0',
-        data_stream_in      => remote_data,
-        data_stream_in_stb  => remote_data_in_stb,
-        data_stream_in_ack  => remote_data_in_ack,
-        data_stream_out     => remote_data_out,
-        data_stream_out_stb => remote_data_out_stb,
-        data_stream_out_ack => remote_data_out_ack,
-        tx                  => remote_tx,
-        rx                  => remote_rx
+    port map(  
+        clock_y3            => remote_clock,
+        user_reset          => '0',
+        usb_rs232_rxd       => remote_rx,
+        GPIO_LED            => open,
+        usb_rs232_txd       => remote_tx
     );
-    -- Loopback on remote.
-    remote_data_out_ack <= remote_data_in_ack;
-    remote_data <= remote_data_out;
-    remote_data_in_stb <= remote_data_out_stb;
     ---------------------------------------------------------------------------
     -- LOCAL UART
     ---------------------------------------------------------------------------
@@ -198,7 +203,6 @@ begin
         data_stream_in_ack  => local_data_in_ack,
         data_stream_out     => local_data_out,
         data_stream_out_stb => local_data_out_stb,
-        data_stream_out_ack => '1',
         tx                  => local_tx,
         rx                  => local_rx
     );
