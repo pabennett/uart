@@ -7,6 +7,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity top is
+    generic (
+        baud                : positive;
+        clock_frequency     : positive
+    );
     port (  
         clock_y3                :   in      std_logic;
         user_reset              :   in      std_logic;    
@@ -17,6 +21,10 @@ end top;
 
 architecture rtl of top is
     component loopback is
+        generic (
+            baud                : positive;
+            clock_frequency     : positive
+        );
         port(  
             clock                   :   in      std_logic;
             reset                   :   in      std_logic;    
@@ -30,6 +38,10 @@ begin
     -- Loopback instantiation
     ----------------------------------------------------------------------------
     loopback_inst1 : loopback
+    generic map (
+        baud                => baud,
+        clock_frequency     => clock_frequency
+    )
     port map (  
         clock       => clock_y3,
         reset       => reset, 
