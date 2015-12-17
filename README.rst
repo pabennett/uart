@@ -30,6 +30,8 @@ Source files
 +--------------------+--------+----------------------------------------------------+
 | uart.xml           | XML    | Project file for ChipTools framework               |
 +--------------------+--------+----------------------------------------------------+
+| lx9_unit_tests.py  | Python | Hardware unit tests for the LX9 Microboard         |
++--------------------+--------+----------------------------------------------------+
 
 Getting Started
 ----------------
@@ -77,6 +79,19 @@ The synthesis flow is set to 'ise' as this is targeted at a Spartan6 FPGA.
 
 Build outputs will be automatically archived and stored in the **synthesis**
 directory.
+
+Run the Hardware Unit Tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A set of unit tests have been written to test the UART loopback example after 
+it has been programmed onto a Spartan 6 LX9 Microboard. The unit tests check
+different transfer sizes of random data using the default BAUD rate of 115200.
+
+The tests require `PySerial <https://github.com/pyserial/pyserial>`_ to allow
+Python to read and write to the serial port. Before running the tests the board
+should be programmed and connected to your PC and the serial port setting in
+the unit test should be edited to map to the serial port of the FPGA board.
+
 
 Further reading
 --------------------
