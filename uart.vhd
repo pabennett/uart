@@ -49,7 +49,7 @@ end uart;
 
 architecture rtl of uart is
     ---------------------------------------------------------------------------
-    -- baud generation
+    -- Baud generation constants
     ---------------------------------------------------------------------------
     constant c_tx_div       : integer := clock_frequency / baud;
     constant c_rx_div       : integer := clock_frequency / (baud * 16);
@@ -57,6 +57,9 @@ architecture rtl of uart is
         := integer(ceil(log2(real(c_tx_div))));   
     constant c_rx_div_width : integer 
         := integer(ceil(log2(real(c_rx_div))));
+    ---------------------------------------------------------------------------
+    -- Baud generation signals
+    ---------------------------------------------------------------------------
     signal tx_baud_counter : unsigned(c_tx_div_width - 1 downto 0) 
         := (others => '0');   
     signal tx_baud_tick : std_logic := '0';
@@ -64,20 +67,20 @@ architecture rtl of uart is
         := (others => '0');   
     signal rx_baud_tick : std_logic := '0';
     ---------------------------------------------------------------------------
-    -- transmitter signals
+    -- Transmitter signals
     ---------------------------------------------------------------------------
     type uart_tx_states is ( 
-        send_start_bit,
-        transmit_data,
-        send_stop_bit
+        tx_send_start_bit,
+        tx_send_data,
+        tx_send_stop_bit
     );             
-    signal uart_tx_state : uart_tx_states := send_start_bit;
+    signal uart_tx_state : uart_tx_states := tx_send_start_bit;
     signal uart_tx_data_vec : std_logic_vector(7 downto 0) := (others => '0');
     signal uart_tx_data : std_logic := '1';
     signal uart_tx_count : unsigned(2 downto 0) := (others => '0');
     signal uart_rx_data_in_ack : std_logic := '0';
     ---------------------------------------------------------------------------
-    -- receiver signals
+    -- Receiver signals
     ---------------------------------------------------------------------------
     type uart_rx_states is ( 
         rx_get_start_bit, 
@@ -94,10 +97,11 @@ architecture rtl of uart is
     signal uart_rx_bit_spacing : unsigned (3 downto 0) := (others => '0');
     signal uart_rx_bit_tick : std_logic := '0';
 begin
-    data_stream_in_ack <= uart_rx_data_in_ack;
-    data_stream_out <= uart_rx_data_vec;
+    -- Connect IO
+    data_stream_in_ack  <= uart_rx_data_in_ack;
+    data_stream_out     <= uart_rx_data_vec;
     data_stream_out_stb <= uart_rx_data_out_stb;
-    tx <= uart_tx_data;
+    tx                  <= uart_tx_data;
     ---------------------------------------------------------------------------
     -- OVERSAMPLE_CLOCK_DIVIDER
     -- generate an oversampled tick (baud * 16)
@@ -138,7 +142,7 @@ begin
     end process rxd_synchronise;
     ---------------------------------------------------------------------------
     -- RXD_FILTER
-    -- filter rxd with a 2 bit counter.
+    -- Filter rxd with a 2 bit counter.
     ---------------------------------------------------------------------------
     rxd_filter : process(clock)
     begin
@@ -266,20 +270,20 @@ begin
                 uart_tx_data <= '1';
                 uart_tx_data_vec <= (others => '0');
                 uart_tx_count <= (others => '0');
-                uart_tx_state <= send_start_bit;
+                uart_tx_state <= tx_send_start_bit;
                 uart_rx_data_in_ack <= '0';
             else
                 uart_rx_data_in_ack <= '0';
                 case uart_tx_state is
-                    when send_start_bit =>
+                    when tx_send_start_bit =>
                         if tx_baud_tick = '1' and data_stream_in_stb = '1' then
                             uart_tx_data  <= '0';
-                            uart_tx_state <= transmit_data;
+                            uart_tx_state <= tx_send_data;
                             uart_tx_count <= (others => '0');
                             uart_rx_data_in_ack <= '1';
                             uart_tx_data_vec <= data_stream_in;
                         end if;
-                    when transmit_data =>
+                    when tx_send_data =>
                         if tx_baud_tick = '1' then
                             uart_tx_data <= uart_tx_data_vec(0);
                             uart_tx_data_vec(
@@ -291,17 +295,17 @@ begin
                                 uart_tx_count <= uart_tx_count + 1;
                             else
                                 uart_tx_count <= (others => '0');
-                                uart_tx_state <= send_stop_bit;
+                                uart_tx_state <= tx_send_stop_bit;
                             end if;
                         end if;
-                    when send_stop_bit =>
+                    when tx_send_stop_bit =>
                         if tx_baud_tick = '1' then
                             uart_tx_data <= '1';
-                            uart_tx_state <= send_start_bit;
+                            uart_tx_state <= tx_send_start_bit;
                         end if;
                     when others =>
                         uart_tx_data <= '1';
-                        uart_tx_state <= send_start_bit;
+                        uart_tx_state <= tx_send_start_bit;
                 end case;
             end if;
         end if;
