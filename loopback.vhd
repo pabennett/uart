@@ -8,24 +8,23 @@ library ieee;
     use ieee.std_logic_textio.all;
     use ieee.math_real.all;
 
-
 entity loopback is
     generic (
-        baud                : positive;
-        clock_frequency     : positive
+        baud            : positive;
+        clock_frequency : positive
     );
     port (  
-        clock   :   in std_logic;
-        reset   :   in std_logic;    
-        rx      :   in std_logic;
-        tx      :   out std_logic
+        clock           : in std_logic;
+        reset           : in std_logic;    
+        rx              : in std_logic;
+        tx              : out std_logic
     );
 end loopback;
 
 architecture rtl of loopback is
-    ----------------------------------------------------------------------------
+    ---------------------------------------------------------------------------
     -- Component declarations
-    ----------------------------------------------------------------------------
+    ---------------------------------------------------------------------------
     component uart is
         generic (
             baud                : positive;
@@ -58,28 +57,31 @@ architecture rtl of loopback is
             read_en     : in std_logic;
             full        : out std_logic;
             empty       : out std_logic;
-            level       : out std_logic_vector(integer(ceil(log2(real(fifo_depth))))-1 downto 0)
+            level       : out std_logic_vector(
+                integer(ceil(log2(real(fifo_depth))))-1 downto 0
+            )
         );
     end component;
-
-    ----------------------------------------------------------------------------
+    ---------------------------------------------------------------------------
     -- UART signals
-    ----------------------------------------------------------------------------
-    constant buffer_depth : integer   := 1024;
+    ---------------------------------------------------------------------------
     signal uart_data_in : std_logic_vector(7 downto 0);
     signal uart_data_out : std_logic_vector(7 downto 0);
     signal uart_data_in_stb : std_logic := '0';
     signal uart_data_in_ack : std_logic := '0';
     signal uart_data_out_stb : std_logic := '0';
-    signal level : std_logic_vector(integer(ceil(log2(real(buffer_depth))))-1 downto 0);
+    -- Transmit buffer signals
+    constant buffer_depth : integer   := 1024;
     signal fifo_data_out : std_logic_vector(7 downto 0);
     signal fifo_data_in  : std_logic_vector(7 downto 0);
     signal fifo_data_in_stb : std_logic;
     signal fifo_data_out_stb : std_logic;
+    signal fifo_full : std_logic;
+    signal fifO_empty : std_logic;
 begin
-    ----------------------------------------------------------------------------
+    ---------------------------------------------------------------------------
     -- UART instantiation
-    ----------------------------------------------------------------------------
+    ---------------------------------------------------------------------------
     uart_inst : uart
     generic map (
         baud                => baud,
@@ -112,14 +114,14 @@ begin
         read_data    => fifo_data_out,
         write_en     => fifo_data_in_stb,
         read_en      => fifo_data_out_stb,
-        full         => open,
-        empty        => open,
-        level        => level
+        full         => fifo_full,
+        empty        => fifo_empty,
+        level        => open
     );
 
-    ----------------------------------------------------------------------------
+    ---------------------------------------------------------------------------
     -- Simple loopback, retransmit any received data
-    ----------------------------------------------------------------------------
+    ---------------------------------------------------------------------------
     uart_loopback : process (clock)
     begin
         if rising_edge(clock) then
@@ -129,32 +131,26 @@ begin
                 fifo_data_out_stb       <= '0';
                 fifo_data_in_stb        <= '0';
             else
-                -- acknowledge data receive strobes and set up a transmission
+                -- Acknowledge data receive strobes and set up a transmission
                 -- request
                 fifo_data_in_stb    <= '0';
-                if (
-                    uart_data_out_stb = '1' and 
-                    unsigned(level) < buffer_depth - 1
-                ) then
+                if uart_data_out_stb = '1' and fifo_full = '0' then
                     fifo_data_in_stb    <= '1';
                     fifo_data_in        <= uart_data_out;
                 end if;
-
+                -- Clear transmission request strobe upon acknowledge.
+                if uart_data_in_ack = '1' then
+                    uart_data_in_stb    <= '0';
+                end if;
                 -- Transmit any data in the buffer
                 fifo_data_out_stb <= '0';
-                if unsigned(level) > 0 then
+                if fifo_empty = '0' then
                     if uart_data_in_stb = '0' then
                         uart_data_in_stb <= '1';
                         fifo_data_out_stb <= '1';
                         uart_data_in <= fifo_data_out;
                     end if;
                 end if;
-
-                -- clear transmission request strobe upon acknowledge.
-                if uart_data_in_ack = '1' then
-                    uart_data_in_stb    <= '0';
-                end if;
-
             end if;
         end if;
     end process;    
