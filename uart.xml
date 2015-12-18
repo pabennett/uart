@@ -6,18 +6,26 @@
     <config synthesis_directory='synthesis'/>
     <config simulator='modelsim'/>
     <config synthesiser='ise'/>
+    <!-- Synthesis constraints for the Spartan 6 LX9 Microboard -->
     <config part='xc6slx45-csg324-2'/>
-    <unittest path='uart_unit_tests.py'/>
-    <constraints path='uart.ucf' flow='ise'/>
+    <constraints path='source/uart.ucf' flow='ise'/>
+    <!-- Configure the baud rate and clock frequency of the design -->
+    <generic baud='115200'/>
+    <generic clock_frequency='100000000'/>
+    <!-- Main design files-->
     <library name='lib_uart'>
-        <file path='top.vhd'/>
-        <file path='loopback.vhd'/>
-        <file path='uart.vhd'/>
+        <file path='source/generic_fifo.vhd'/>
+        <file path='source/top.vhd'/>
+        <file path='source/loopback.vhd'/>
+        <file path='source/uart.vhd'/>
     </library>
+    <!-- Testbench -->
     <library name='lib_tb_uart'>
         <file 
-            path='tb_uart.vhd'
+            path='source/tb_uart.vhd'
             synthesise='false'
         />
     </library>
+    <!-- Unit tests -->
+    <unittest path='source/uart_unit_tests.py'/>
 </project>
