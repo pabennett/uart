@@ -13,6 +13,8 @@ The default settings for the link are 115200 BAUD, 8 Data, 1 Stop, No parity.
 Source files
 ------------
 
+The following source files can be found in the 'source' directory.
+
 +--------------------+--------+----------------------------------------------------+
 | File               | Type   | Description                                        |
 +====================+========+====================================================+
@@ -28,16 +30,17 @@ Source files
 +--------------------+--------+----------------------------------------------------+
 | uart.ucf           | UCF    | Constraints for Spartan 6 LX9 Microboard (Avnet)   |
 +--------------------+--------+----------------------------------------------------+
-| uart.xml           | XML    | Project file for ChipTools framework               |
-+--------------------+--------+----------------------------------------------------+
 | fpga_unit_tests.py | Python | Hardware unit tests for the LX9 Microboard         |
 +--------------------+--------+----------------------------------------------------+
+
+The **uart.xml** file in the top level directory is a project file to allow you
+to build and test this design using the `ChipTools framework <https://github.com/pabennett/chiptools>`_
 
 Getting Started
 ----------------
 
-The UART core includes a project file so that it can be built and tested using
-the `ChipTools framework <https://github.com/pabennett/chiptools>`_
+The following instructions explain how to test and build the loopback example
+using the ChipTools framework. Simulation and hardware tests are included.
 
 Run the Unit Tests
 ~~~~~~~~~~~~~~~~~~
