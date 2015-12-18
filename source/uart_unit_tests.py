@@ -133,8 +133,6 @@ class uart_test_random_data_phase90(UartTestBase):
     baud = 115200
     local_clock_frequency = 100e6
     remote_clock_frequency = local_clock_frequency
-    period = (1 / local_clock_frequency)
-    delay_ns = (period * 0.25) / 1e-9
     values = [random.randint(0, 2**8-1) for i in range(700)]
 
     def test_output(self):
@@ -146,8 +144,6 @@ class uart_test_random_data_phase180(UartTestBase):
     baud = 115200
     local_clock_frequency = 100e6
     remote_clock_frequency = local_clock_frequency
-    period = (1 / local_clock_frequency)
-    delay_ns = (period * 0.5) / 1e-9
     values = [random.randint(0, 2**8-1) for i in range(700)]
 
     def test_output(self):
@@ -159,8 +155,6 @@ class uart_test_random_data_phase270(UartTestBase):
     baud = 115200
     local_clock_frequency = 100e6
     remote_clock_frequency = local_clock_frequency
-    period = (1 / local_clock_frequency)
-    delay_ns = (period * 0.75) / 1e-9
     values = [random.randint(0, 2**8-1) for i in range(700)]
 
     def test_output(self):
@@ -172,8 +166,6 @@ class uart_local_clock_125e6_remote_clock_200e6(UartTestBase):
     baud = 230400
     local_clock_frequency = 125e6
     remote_clock_frequency = 200e6
-    period = (1 / local_clock_frequency)
-    delay_ns = (period * 0.75) / 1e-9
     values = [random.randint(0, 2**8-1) for i in range(2000)]
 
     def test_output(self):
@@ -185,8 +177,6 @@ class uart_local_clock_50e6_remote_clock_160e6(UartTestBase):
     baud = 230400
     local_clock_frequency = 50e6
     remote_clock_frequency = 160e6
-    period = (1 / local_clock_frequency)
-    delay_ns = (period * 0.75) / 1e-9
     values = [random.randint(0, 2**8-1) for i in range(2000)]
 
     def test_output(self):
@@ -198,7 +188,6 @@ class uart_921600baud_local_clock_100e6_remote_clock_60e6(UartTestBase):
     baud = 921600
     local_clock_frequency = 100e6
     remote_clock_frequency = 60e6
-    period = (1 / local_clock_frequency)
     values = [random.randint(0, 2**8-1) for i in range(30000)]
 
     def test_output(self):
@@ -210,7 +199,6 @@ class uart_one_character_0xFF(UartTestBase):
     baud = 921600
     local_clock_frequency = 100e6
     remote_clock_frequency = 60e6
-    period = (1 / local_clock_frequency)
     values = [0xFF]
 
     def test_output(self):
@@ -222,7 +210,6 @@ class uart_one_character_0x00(UartTestBase):
     baud = 921600
     local_clock_frequency = 100e6
     remote_clock_frequency = 60e6
-    period = (1 / local_clock_frequency)
     values = [0x00]
 
     def test_output(self):
@@ -234,7 +221,6 @@ class uart_one_character_0xAA(UartTestBase):
     baud = 921600
     local_clock_frequency = 100e6
     remote_clock_frequency = 60e6
-    period = (1 / local_clock_frequency)
     values = [0xAA]
 
     def test_output(self):
@@ -246,9 +232,20 @@ class uart_one_character_0x55(UartTestBase):
     baud = 921600
     local_clock_frequency = 100e6
     remote_clock_frequency = 60e6
-    period = (1 / local_clock_frequency)
     values = [0x55]
 
     def test_output(self):
         """Check that the UART correctly processes a single character 0x55"""
         self.check_output()
+
+
+class uart_12_block_test(UartTestBase):
+    baud = 921600
+    local_clock_frequency = 300e6
+    remote_clock_frequency = 100e6
+    values = [i for i in range(12)]
+
+    def test_output(self):
+        """Check that the UART correctly processes a single character 0x55"""
+        self.check_output()
+
