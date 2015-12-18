@@ -1,3 +1,12 @@
+"""
+fpga_unit_tests.py
+The tests contained in this script are designed to test the UART loopback
+example when it is programmed on to an FPGA. To run the tests you must first
+have programmed an FPGA board with the loopback example and connected a serial
+cable to your PC. The PORT setting in this file, which defaults to 'COM4', must
+be edited to match the port address assigned to the FPGA board. These tests
+check the default configuration of 115200 BAUD.
+"""
 import serial
 import random
 import unittest
@@ -26,7 +35,11 @@ class TestSerial(unittest.TestCase):
         self.ser.close()
 
     def test_single_byte(self):
-        for i in range(255):
+        """
+        Send bytes 0-255 to the UART individually and ensure that they are
+        returned.
+        """
+        for i in range(256):
             print('Checking byte: ' + hex(i) + ' '*50, end='')
             self.ser.write([i])
             time.sleep(0.1)
@@ -36,6 +49,11 @@ class TestSerial(unittest.TestCase):
         print('')
 
     def test_random_byte_sequences(self):
+        """
+        This test transmits 20 blocks of 2**16 random bytes to the UART and
+        checks that the data is correctly returned. If data is not returned by
+        the device or the data is incorrect this test will fail.
+        """
         burst_size = 2**16
         num_bursts = 20
         for burstId in range(num_bursts):

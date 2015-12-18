@@ -30,7 +30,7 @@ Source files
 +--------------------+--------+----------------------------------------------------+
 | uart.xml           | XML    | Project file for ChipTools framework               |
 +--------------------+--------+----------------------------------------------------+
-| lx9_unit_tests.py  | Python | Hardware unit tests for the LX9 Microboard         |
+| fpga_unit_tests.py | Python | Hardware unit tests for the LX9 Microboard         |
 +--------------------+--------+----------------------------------------------------+
 
 Getting Started
