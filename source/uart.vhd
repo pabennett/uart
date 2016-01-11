@@ -54,9 +54,9 @@ architecture rtl of uart is
     constant c_tx_div       : integer := clock_frequency / baud;
     constant c_rx_div       : integer := clock_frequency / (baud * 16);
     constant c_tx_div_width : integer 
-        := integer(ceil(log2(real(c_tx_div))));   
+        := integer(log2(real(c_tx_div))) + 1;   
     constant c_rx_div_width : integer 
-        := integer(ceil(log2(real(c_rx_div))));
+        := integer(log2(real(c_rx_div))) + 1;
     ---------------------------------------------------------------------------
     -- Baud generation signals
     ---------------------------------------------------------------------------
