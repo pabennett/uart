@@ -170,6 +170,27 @@ begin
             wait until rising_edge(local_clock);
         end if;
     end process;
+    -- If the test does not return data within a time limit then the system may
+    -- not be functioning. Abort the test and report an error instead of 
+    -- continuing.
+    watchdog : process(local_clock) 
+        constant timeout_reset : integer := 10e6;
+        variable timeout : integer := timeout_reset;
+    begin
+        if rising_edge(local_clock) then
+            if local_data_out_stb = '1' then
+                timeout := timeout_reset;
+            else
+                timeout := timeout - 1;
+                if timeout = 0 then
+                    report "Automatically aborting testbench because data" &
+                    " was not received for " & integer'image(timeout_reset) &
+                    " local clock cycles." severity failure;
+                end if;
+            end if;
+        end if;
+    end process;
+
     ---------------------------------------------------------------------------
     -- REMOTE UART
     ---------------------------------------------------------------------------
