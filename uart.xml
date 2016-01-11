@@ -15,9 +15,9 @@
     <!-- Main design files-->
     <library name='lib_uart'>
         <file path='source/generic_fifo.vhd'/>
-        <file path='source/top.vhd'/>
-        <file path='source/loopback.vhd'/>
         <file path='source/uart.vhd'/>
+        <file path='source/loopback.vhd'/>
+        <file path='source/top.vhd'/>
     </library>
     <!-- Testbench -->
     <library name='lib_tb_uart'>
