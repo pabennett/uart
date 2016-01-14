@@ -9,6 +9,9 @@
     <!-- Synthesis constraints for the Spartan 6 LX9 Microboard -->
     <config part='xc6slx9-csg324-2'/>
     <constraints path='source/uart.ucf' flow='ise'/>
+    <!-- Additional command line arguments when using ModelSim for simulation,
+         ensure 1ps resolution is used otherwise some tests will fail. -->
+    <config args_modelsim_simulate='-t ps'/>
     <!-- Configure the baud rate and clock frequency of the design -->
     <generic baud='115200'/>
     <generic clock_frequency='100000000'/>
