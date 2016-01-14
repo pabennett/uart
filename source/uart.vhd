@@ -231,8 +231,14 @@ begin
                         -- Wait for the next re-aligned rx_bit_tick
                         -- All following rx_bit_ticks will land near the
                         -- centre of the data bits.
-                        if uart_rx_bit_tick = '1'then
-                            uart_rx_state <= rx_get_data;
+                        if uart_rx_bit_tick = '1' then
+                            -- If the start bit is corrupted return to the 
+                            -- initial state. 
+                            if uart_rx_bit /= '0' then
+                                uart_rx_state <= rx_get_start_bit;
+                            else
+                                uart_rx_state <= rx_get_data;
+                            end if;
                         end if;
                     when rx_get_data =>
                         if uart_rx_bit_tick = '1' then
