@@ -51,20 +51,16 @@ architecture rtl of uart is
     ---------------------------------------------------------------------------
     -- Baud generation constants
     ---------------------------------------------------------------------------
-    constant c_tx_div       : integer := clock_frequency / baud;
-    constant c_rx_div       : integer := clock_frequency / (baud * 16);
-    constant c_tx_div_width : integer 
-        := integer(log2(real(c_tx_div))) + 1;   
+    constant c_rx_div       : integer := (clock_frequency / (baud * 16)) - 1;
     constant c_rx_div_width : integer 
         := integer(log2(real(c_rx_div))) + 1;
     ---------------------------------------------------------------------------
     -- Baud generation signals
     ---------------------------------------------------------------------------
-    signal tx_baud_counter : unsigned(c_tx_div_width - 1 downto 0) 
-        := (others => '0');   
+    signal tx_baud_counter : unsigned(3 downto 0) := (others => '1');   
     signal tx_baud_tick : std_logic := '0';
     signal rx_baud_counter : unsigned(c_rx_div_width - 1 downto 0) 
-        := (others => '0');   
+        := to_unsigned(c_rx_div, c_rx_div_width);   
     signal rx_baud_tick : std_logic := '0';
     ---------------------------------------------------------------------------
     -- Transmitter signals
@@ -84,13 +80,15 @@ architecture rtl of uart is
     ---------------------------------------------------------------------------
     type uart_rx_states is ( 
         rx_get_start_bit, 
+        rx_wait_one_tick,
         rx_get_data, 
         rx_get_stop_bit
     );            
     signal uart_rx_state : uart_rx_states := rx_get_start_bit;
     signal uart_rx_bit : std_logic := '1';
     signal uart_rx_data_vec : std_logic_vector(7 downto 0) := (others => '0');
-    signal uart_rx_data_sr : std_logic_vector(1 downto 0) := (others => '1');
+    signal uart_rx_d0 : std_logic := '1';
+    signal uart_rx_sync : std_logic := '1';
     signal uart_rx_filter : unsigned(1 downto 0) := (others => '1');
     signal uart_rx_count : unsigned(2 downto 0) := (others => '0');
     signal uart_rx_data_out_stb : std_logic := '0';
@@ -103,41 +101,59 @@ begin
     data_stream_out_stb <= uart_rx_data_out_stb;
     tx                  <= uart_tx_data;
     ---------------------------------------------------------------------------
-    -- OVERSAMPLE_CLOCK_DIVIDER
+    -- RX_CLOCK_DIVIDER
     -- generate an oversampled tick (baud * 16)
     ---------------------------------------------------------------------------
-    oversample_clock_divider : process (clock)
+    rx_clock_divider : process (clock)
     begin
         if rising_edge (clock) then
             if reset = '1' then
-                rx_baud_counter <= (others => '0');
+                rx_baud_counter <= (others => '1');
                 rx_baud_tick <= '0';    
             else
-                if rx_baud_counter = c_rx_div then
-                    rx_baud_counter <= (others => '0');
+                if rx_baud_counter = 0 then
+                    rx_baud_counter <= to_unsigned(c_rx_div, c_rx_div_width);
                     rx_baud_tick <= '1';
                 else
-                    rx_baud_counter <= rx_baud_counter + 1;
+                    rx_baud_counter <= rx_baud_counter - 1;
                     rx_baud_tick <= '0';
                 end if;
             end if;
         end if;
-    end process oversample_clock_divider;
+    end process rx_clock_divider;
+    ---------------------------------------------------------------------------
+    -- TX_CLOCK_DIVIDER
+    -- Generate baud ticks at the required rate based on the input clock
+    -- frequency and baud rate
+    ---------------------------------------------------------------------------
+    tx_clock_divider : process (clock)
+    begin
+        if rising_edge (clock) then
+            if reset = '1' then
+                tx_baud_counter <= (others => '1');
+                tx_baud_tick <= '0';    
+            else
+                tx_baud_tick <= '0';
+                if rx_baud_tick = '1' then
+                    if tx_baud_counter = 0 then
+                        tx_baud_counter <= (others => '1');
+                        tx_baud_tick <= '1';
+                    else
+                        tx_baud_counter <= tx_baud_counter - 1;
+                        tx_baud_tick <= '0';
+                    end if;
+                end if;
+            end if;
+        end if;
+    end process tx_clock_divider;
     ---------------------------------------------------------------------------
     -- RXD_SYNCHRONISE
-    -- Synchronise rxd to the oversampled baud
     ---------------------------------------------------------------------------
     rxd_synchronise : process(clock)
     begin
         if rising_edge(clock) then
-            if reset = '1' then
-                uart_rx_data_sr <= (others => '1');
-            else
-                if rx_baud_tick = '1' then
-                    uart_rx_data_sr(0) <= rx;
-                    uart_rx_data_sr(1) <= uart_rx_data_sr(0);
-                end if;
-            end if;
+            uart_rx_d0 <= rx;
+            uart_rx_sync <= uart_rx_d0;
         end if;
     end process rxd_synchronise;
     ---------------------------------------------------------------------------
@@ -153,9 +169,9 @@ begin
             else
                 if rx_baud_tick = '1' then
                     -- filter rxd.
-                    if uart_rx_data_sr(1) = '1' and uart_rx_filter < 3 then
+                    if uart_rx_sync = '1' and uart_rx_filter < 3 then
                         uart_rx_filter <= uart_rx_filter + 1;
-                    elsif uart_rx_data_sr(1) = '0' and uart_rx_filter > 0 then
+                    elsif uart_rx_sync = '0' and uart_rx_filter > 0 then
                         uart_rx_filter <= uart_rx_filter - 1;
                     end if;
                     -- set the rx bit.
@@ -176,15 +192,9 @@ begin
         if rising_edge(clock) then
             uart_rx_bit_tick <= '0';
             if rx_baud_tick = '1' then       
-                if uart_rx_bit_spacing = 15 then
+                if uart_rx_bit_spacing = tx_baud_counter then
                     uart_rx_bit_tick <= '1';
-                    uart_rx_bit_spacing <= (others => '0');
-                else
-                    uart_rx_bit_spacing <= uart_rx_bit_spacing + 1;
                 end if;
-                if uart_rx_state = rx_get_start_bit then
-                    uart_rx_bit_spacing <= (others => '0');
-                end if; 
             end if;
         end if;
     end process rx_bit_spacing;
@@ -199,11 +209,29 @@ begin
                 uart_rx_data_vec <= (others => '0');
                 uart_rx_count <= (others => '0');
                 uart_rx_data_out_stb <= '0';
+                uart_rx_bit_spacing <= (others => '0');
             else
                 uart_rx_data_out_stb <= '0';
                 case uart_rx_state is
                     when rx_get_start_bit =>
+                        -- Wait for the start bit by sampling the RX data line
+                        -- using the oversampled baud ticks. When the start bit
+                        -- is seen realign the rx_bit_ticks to the centre of 
+                        -- the data bits by updating the rx_bit_spacing.
                         if rx_baud_tick = '1' and uart_rx_bit = '0' then
+                            uart_rx_state <= rx_wait_one_tick;
+                            uart_rx_bit_spacing <= (
+                                not tx_baud_counter(3),
+                                tx_baud_counter(2),
+                                tx_baud_counter(1),
+                                tx_baud_counter(0)
+                            );
+                        end if;
+                    when rx_wait_one_tick =>
+                        -- Wait for the next re-aligned rx_bit_tick
+                        -- All following rx_bit_ticks will land near the
+                        -- centre of the data bits.
+                        if uart_rx_bit_tick = '1'then
                             uart_rx_state <= rx_get_data;
                         end if;
                     when rx_get_data =>
@@ -235,28 +263,6 @@ begin
             end if;
         end if;
     end process uart_receive_data;
-    ---------------------------------------------------------------------------
-    -- TX_CLOCK_DIVIDER
-    -- Generate baud ticks at the required rate based on the input clock
-    -- frequency and baud rate
-    ---------------------------------------------------------------------------
-    tx_clock_divider : process (clock)
-    begin
-        if rising_edge (clock) then
-            if reset = '1' then
-                tx_baud_counter <= (others => '0');
-                tx_baud_tick <= '0';    
-            else
-                if tx_baud_counter = c_tx_div then
-                    tx_baud_counter <= (others => '0');
-                    tx_baud_tick <= '1';
-                else
-                    tx_baud_counter <= tx_baud_counter + 1;
-                    tx_baud_tick <= '0';
-                end if;
-            end if;
-        end if;
-    end process tx_clock_divider;
     ---------------------------------------------------------------------------
     -- UART_SEND_DATA 
     -- Get data from data_stream_in and send it one bit at a time upon each 
