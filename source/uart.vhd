@@ -102,7 +102,8 @@ begin
     tx                  <= uart_tx_data;
     ---------------------------------------------------------------------------
     -- RX_CLOCK_DIVIDER
-    -- generate an oversampled tick (baud * 16)
+    -- Generate an RX sampling tick at 16x the baud rate to capture the
+    -- front of the start bit and allow data sampling re-alignment.
     ---------------------------------------------------------------------------
     rx_clock_divider : process (clock)
     begin
@@ -134,6 +135,8 @@ begin
                 tx_baud_tick <= '0';    
             else
                 tx_baud_tick <= '0';
+                -- Generate a tx_baud_tick every 16 rx_baud_ticks as the
+                -- rx_baud_ticks are generated at 16x the baud rate.
                 if rx_baud_tick = '1' then
                     if tx_baud_counter = 0 then
                         tx_baud_counter <= (others => '1');
@@ -148,6 +151,7 @@ begin
     end process tx_clock_divider;
     ---------------------------------------------------------------------------
     -- RXD_SYNCHRONISE
+    -- Double register the RX input before it is used.
     ---------------------------------------------------------------------------
     rxd_synchronise : process(clock)
     begin
@@ -186,6 +190,10 @@ begin
     end process rxd_filter;
     ---------------------------------------------------------------------------
     -- RX_BIT_SPACING
+    -- Generate a sample tick for received bits at the baud rate using the bit
+    -- offset determined during the get_start_bit stage of the receive FSM.
+    -- The bit spacing ensures the sampling point is near the centre of the
+    -- data bit.
     ---------------------------------------------------------------------------
     rx_bit_spacing : process (clock)
     begin
