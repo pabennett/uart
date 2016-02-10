@@ -17,6 +17,7 @@
     <generic clock_frequency='100000000'/>
     <!-- Main design files-->
     <library name='lib_uart'>
+        <file path='source/temp_pkg.vhd'/>
         <file path='source/generic_fifo.vhd'/>
         <file path='source/uart.vhd'/>
         <file path='source/loopback.vhd'/>

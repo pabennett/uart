@@ -45,7 +45,6 @@ class UartTestBase(ChipToolsTest):
     ):
         """Prepare the simulation environment and run the simulation."""
         self.generics = {
-            'delay_ns': float(delay_ns),
             'baud': int(baud),
             'remote_clock_hz': int(remote_clock),
             'local_clock_hz': int(local_clock),
