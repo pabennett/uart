@@ -2,6 +2,9 @@ import random
 import os
 import re
 from chiptools.testing.testloader import ChipToolsTest
+import traceback
+
+base = os.path.dirname(__file__)
 
 
 class UartTestBase(ChipToolsTest):
@@ -9,6 +12,7 @@ class UartTestBase(ChipToolsTest):
     generics = {}
     entity = 'tb_uart'
     library = 'lib_tb_uart'
+    project = os.path.join(base, '..', 'uart.xml')
 
     def setUp(self):
         """Place any code that is required to prepare simulator inputs in this
@@ -56,7 +60,7 @@ class UartTestBase(ChipToolsTest):
         self.assertEqual(return_code, 0)
         # Check output
         self.check_output(self.output_path, values)
-        self.assertIsNone(re.search('.*Error:.*', self.sim_stdout))
+        self.assertIsNone(re.search('.*Error:.*', stdout))
 
     def generic_random_data_test(
         self,
