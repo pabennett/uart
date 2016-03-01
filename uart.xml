@@ -4,7 +4,7 @@
 <project>
     <config simulation_directory='simulation'/>
     <config synthesis_directory='synthesis'/>
-    <config simulator='modelsim'/>
+    <config simulator='ghdl'/>
     <config synthesiser='ise'/>
     <!-- Synthesis constraints for the Spartan 6 LX9 Microboard -->
     <config part='xc6slx9-csg324-2'/>
